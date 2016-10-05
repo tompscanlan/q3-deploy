@@ -1,0 +1,58 @@
+version: '2'
+services:
+
+  exceptions:
+    env_file:
+        - common.env
+    image: tompscanlan/q3errord
+    ports:
+      - ${EXCEPTION_PORT}:9999
+    command:  /q3errord --port 9999 $EXCEPTION_METHOD
+    #build:
+    #  context: /Users/tscanlan/work/src/github.com/tompscanlan/q3errord
+    #  dockerfile: Dockerfile
+
+  journal:
+    image: tompscanlan/q3-training-journal
+    ports:
+      - ${JOURNAL_PORT}:9999
+    command: /q3-training-journal -apiHost 0.0.0.0 -l 9999
+    build:
+      context: /Users/tscanlan/work/src/github.com/tdhite/q3-training-journal
+      dockerfile: Dockerfile
+
+  labdata:
+    image: tompscanlan/labreserved
+    ports:
+      - ${LABDATA_PORT}:80
+      - 20443:443
+    build:
+      context: /Users/tscanlan/work/src/github.com/tompscanlan/labreserved
+      dockerfile: Dockerfile
+
+  reservation:
+    image: tompscanlan/q3reservation
+    ports:
+      - ${RESERVATION_PORT}:9999
+    command:  /q3reservation --port 9999 --exception-server http://exceptions:$${EXCEPTION_PORT} --journal-server http://journal:$${JOURNAL_PORT}  --updater-server http://updater:$${UPDATER_PORT} --labdata-server labdata:${LABDATA_PORT}
+    build:
+      context: /Users/tscanlan/work/src/github.com/tompscanlan/q3reservation
+      dockerfile: Dockerfile
+    links:
+      - exceptions
+      - journal
+      - labdata
+      - updater
+
+  updater:
+    image: tompscanlan/q3updater
+    ports:
+      - ${UPDATER_PORT}:9999
+    command:  /q3updater --port 9999 -t 1 --journal-server http://journal:${JOURNAL_PORT} --labdata-server http://labdata:${LABDATA_PORT}
+    build:
+      context: /Users/tscanlan/work/src/github.com/tompscanlan/q3updater
+      dockerfile: Dockerfile
+    links:
+      - exceptions
+      - journal
+      - labdata
