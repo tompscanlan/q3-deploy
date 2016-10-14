@@ -2,42 +2,40 @@ version: '2'
 services:
 
   exceptions:
-    env_file:
-        - common.env
-    image: tompscanlan/q3errord
+    image: tompscanlan/q3errord:latest
     ports:
-      - ${EXCEPTION_PORT}:9999
-    command:  /q3errord --port 9999 $EXCEPTION_METHOD
-    #build:
-    #  context: /Users/tscanlan/work/src/github.com/tompscanlan/q3errord
-    #  dockerfile: Dockerfile
+      - ${EXCEPTION_PORT}:${EXCEPTION_PORT}
+    environment:
+        EXCEPTION_PORT: ${EXCEPTION_PORT}
+    command:  /q3errord --port ${EXCEPTION_PORT} ${EXCEPTION_METHOD}
 
   journal:
-    image: tompscanlan/q3-training-journal
+    image: tompscanlan/q3-training-journal:latest
     ports:
-      - ${JOURNAL_PORT}:9999
-    command: /q3-training-journal -apiHost 0.0.0.0 -l 9999
-    build:
-      context: /Users/tscanlan/work/src/github.com/tdhite/q3-training-journal
-      dockerfile: Dockerfile
+      - ${JOURNAL_PORT}:${JOURNAL_PORT}
+    environment:
+        JOURNAL_PORT: ${JOURNAL_PORT}
+    command: /q3-training-journal -apiHost 0.0.0.0 -l ${JOURNAL_PORT}
 
   labdata:
-    image: tompscanlan/labreserved
+    image: tompscanlan/labreserved:latest
+    environment:
+      TEAM_ID: ${TEAM_ID}
+      BLOB_ENDPOINT: ${BLOB_ENDPOINT}
+      LABDATA_PORT: ${LABDATA_PORT}
+      LABDATA_SSL_PORT: ${LABDATA_SSL_PORT}
     ports:
       - ${LABDATA_PORT}:80
-      - 20443:443
-    build:
-      context: /Users/tscanlan/work/src/github.com/tompscanlan/labreserved
-      dockerfile: Dockerfile
+      - ${LABDATA_SSL_PORT}:443
+    command: /labreserved-server --tls-host 0.0.0.0 --host 0.0.0.0 --port ${LABDATA_PORT} --tls-port ${LABDATA_SSL_PORT} --tls-key /lab.key --tls-certificate /lab.crt
 
   reservation:
-    image: tompscanlan/q3reservation
+    image: tompscanlan/q3reservation:latest
     ports:
-      - ${RESERVATION_PORT}:9999
-    command:  /q3reservation --port 9999 --exception-server http://exceptions:$${EXCEPTION_PORT} --journal-server http://journal:$${JOURNAL_PORT}  --updater-server http://updater:$${UPDATER_PORT} --labdata-server labdata:${LABDATA_PORT}
-    build:
-      context: /Users/tscanlan/work/src/github.com/tompscanlan/q3reservation
-      dockerfile: Dockerfile
+      - ${RESERVATION_PORT}:${RESERVATION_PORT}
+    environment:
+        RESERVATION_PORT: ${RESERVATION_PORT}
+    command:  /q3reservation --port ${RESERVATION_PORT}  --journal-server http://journal:${JOURNAL_PORT}  --updater-server http://updater:${UPDATER_PORT} --labdata-server labdata:${LABDATA_PORT}
     links:
       - exceptions
       - journal
@@ -45,14 +43,22 @@ services:
       - updater
 
   updater:
-    image: tompscanlan/q3updater
+    image: tompscanlan/q3updater:latest
     ports:
-      - ${UPDATER_PORT}:9999
-    command:  /q3updater --port 9999 -t 1 --journal-server http://journal:${JOURNAL_PORT} --labdata-server http://labdata:${LABDATA_PORT}
-    build:
-      context: /Users/tscanlan/work/src/github.com/tompscanlan/q3updater
-      dockerfile: Dockerfile
+      - ${UPDATER_PORT}:${UPDATER_PORT}
+    environment:
+      TEAM_ID: ${TEAM_ID}
+      UPDATER_PORT: ${UPDATER_PORT}
+    command:  /q3updater --port ${UPDATER_PORT} --journal-server http://journal:${JOURNAL_PORT} --labdata-server http://labdata:${LABDATA_PORT}
     links:
       - exceptions
       - journal
       - labdata
+  test:
+    image: busybox
+    command: sleep 10000
+    links:
+      - exceptions
+      - journal
+      - labdata
+      - updater
