@@ -25,8 +25,8 @@ services:
       LABDATA_PORT: ${LABDATA_PORT}
       LABDATA_SSL_PORT: ${LABDATA_SSL_PORT}
     ports:
-      - ${LABDATA_PORT}:80
-      - ${LABDATA_SSL_PORT}:443
+      - ${LABDATA_PORT}:${LABDATA_PORT}
+      - ${LABDATA_SSL_PORT}:${LABDATA_PORT}
     command: /labreserved-server --tls-host 0.0.0.0 --host 0.0.0.0 --port ${LABDATA_PORT} --tls-port ${LABDATA_SSL_PORT} --tls-key /lab.key --tls-certificate /lab.crt
 
   reservation:
